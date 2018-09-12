@@ -107,9 +107,9 @@ spec_exp=spec_exp(ch);
 spec_sum_sim=nmr_65*nucabund('65Cu')+nucabund('63Cu')*nmr_63;
 spec_sum_sim=spec_sum_sim/max(spec_sum_sim);
 
+plot(f_sim,spec_sum_sim/2,'r','linewidth',2)
 
-
-% [spec_sum_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sum_sim,f_exp,spec_exp,'lsq1');
+[spec_sum_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sum_sim,f_exp,spec_exp,'lsq1');
 % spec_exp = rescale_n_lw(spec_exp,spec_sum_sim,'lsq1');
 
 

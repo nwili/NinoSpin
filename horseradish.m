@@ -37,7 +37,7 @@ zeemanop = @(v) v(1)*GxM + v(2)*GyM + v(3)*GzM;
 
 % initialize output
 %%% hey nino %%% - think about possible outputs as per orientation
-[nu,spec]=makespec(Exp.Range,Exp.nPoints,Exp.Range,[0 0]);
+[nu,spec]=makespec(Exp.Range,Exp.nPoints,Exp.Range+[eps -eps],[0 0]);
 
 % loop over orientations
 for iOrient=1:nOrientations
@@ -59,7 +59,8 @@ for iOrient=1:nOrientations
     ProbeWeights = Probabilities.*exp(-2*((TransFreqs-Exp.mwFreq)/Exp.ExciteWidth).^2);
     ProbeWeights(ProbeWeights<Opt.Threshold.Probe)=0; %apply cutoff
     
-    if ~any(ProbeWeights)
+    
+    if ~any(ProbeWeights) %abort this orientation if now transition is observed
         continue;
     end
     
@@ -110,8 +111,8 @@ if ~isfield(Opt,'Symmetry') Opt.Symmetry=symm(Sys); end
 if ~isfield(Opt,'Threshold')
     Opt.Threshold=struct;
 end
-if ~isfield(Opt,'Threshold.Probe')  Opt.Threshold.Probe=1e-4; end
-if ~isfield(Opt,'Threshold.Pump')  Opt.Threshold.Pump=1e-4; end
+if ~isfield(Opt,'Threshold.Probe')  Opt.Threshold.Probe=1e-6; end
+if ~isfield(Opt,'Threshold.Pump')  Opt.Threshold.Pump=1e-6; end
 
 
 end

@@ -24,7 +24,7 @@ target=@(x) sum((BroadSpec(ysim,f_exp,yexp,mode,x(1),x(2))-yexp').^2);
 fit_result=fminsearch( target,[2 ;rand]);
 
 lw_min=fit_result(1);
-alpha_min=sin(fit_result(2));
+alpha_min=1/2*sin(fit_result(2))+1/2;
 
 spec_sim_new=BroadSpec(ysim,f_exp,yexp,mode,lw_min,alpha_min);
 end
