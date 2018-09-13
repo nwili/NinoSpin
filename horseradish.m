@@ -93,6 +93,7 @@ zeemanop = @(v) v(1)*GxM + v(2)*GyM + v(3)*GzM;
 parfor iOrient=1:nOrientations
     
     Expl=Exp;
+    Expl.mwFreq=Expl.mwFreq*1e3; %GHz to MHz
     Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) 0];
     % calculate energy levels and probabilites between them
     [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Expl,Opt);
@@ -156,7 +157,6 @@ Sys=varargin{1};
 Exp=varargin{2};
 %%% hey nino %%% - you should add some more Exp-checks here
 if ~isfield(Exp,'Temperature') Exp.Temperature=300; end
-Exp.mwFreq=Exp.mwFreq*1e3; %GHz to MHz
 
 if nargin==3
     Opt=varargin{3};

@@ -46,7 +46,7 @@ MWFQ=35.5; % define microwave frequency
 Sys.S=1/2;
 Sys.g=[2.04598 2.18804];
 % Sys.gStrain=[0.0064 0.0038];
-Sys.Nucs='63Cu';
+Sys.Nucs='Cu';
 Sys.A=[50 612];
 Sys.AFrame=[0 0 0]/180*pi;
 % Sys.HStrain = [100 100];
@@ -78,30 +78,33 @@ Exp.Field=1176;
 
 % Calculate EDNMR spectrum of Cu
 [f_sim,spec_sim] =  horseradish(Sys,Exp,Opt);
-% spec_sim=spec_sim/max(spec_sim);
+spec_sim=spec_sim/max(spec_sim);
 
-plot(f_sim,spec_sim)
+% plot(f_sim,spec_sim)
 
 %%
-% figure(1)
-% clf
-% hold on
-% 
-% ch = 100:950;
-% f_exp=f_exp(ch);
-% spec_exp=spec_exp(ch);
-% 
-% plot(f_sim,spec_sim/2,'r','linewidth',2)
-% 
-% % [spec_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sim,f_exp,spec_exp,'lsq1');
-% % spec_exp = rescale_n_lw(spec_exp,spec_sum_sim,'lsq1');
-% 
-% 
-% plot(f_exp,spec_sim,'r','linewidth',2)
-% plot(f_exp,spec_exp,'k')
-% plot(f_exp,3*(spec_sim-spec_exp')-1)
-% 
-% lw_min
-% alpha_min
-% 
-% % axis([-400 -120 ylim])
+figure(1)
+clf
+hold on
+
+ch = 100:950;
+f_exp=f_exp(ch);
+spec_exp=spec_exp(ch);
+
+plot(f_sim,spec_sim/2,'r','linewidth',2)
+
+[spec_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sim,f_exp,spec_exp,'lsq1');
+% spec_exp = rescale_n_lw(spec_exp,spec_sum_sim,'lsq1');
+
+
+plot(f_exp,spec_sim,'r','linewidth',2)
+plot(f_exp,spec_exp,'k')
+residuals=(spec_sim-spec_exp');
+noise_estimate=rms(residuals);
+plot(f_exp,residuals-2*noise_estimate)
+
+lw_min
+alpha_min
+SNR=max(spec_sim)/noise_estimate
+
+% axis([-400 -120 ylim])
