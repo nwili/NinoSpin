@@ -40,8 +40,13 @@ if ~isfield(Sys,'singleiso') || ~Sys.singleiso
     SysList = isotopologues(Sys,Opt.Threshold.Iso);
     nIsotopologues = numel(SysList);
     
-    PowderSimulation = 1;
-    appendSpectra = PowderSimulation && ~summedOutput;
+    PowderSimulation = ~isfield(Exp,'CrystalOrientation')  || isempty(Exp.CrystalOrientation);
+    
+    if ~PowderSimulation && ~summedOutput && nIsotopologues<2
+        warning('There is no support for separate output of several crystal orientations without isotopologues. Ignored.')
+    end
+    
+    appendSpectra = (PowderSimulation && ~summedOutput) || (~PowderSimulation && ~summedOutput && nIsotopologues>1);
     if appendSpectra
         spec = [];
     else
@@ -76,9 +81,18 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Create Orientational Grid
-%%% hey nino %%% - you should add possibility of single crystals
-Opt.Symmetry=symm(Sys); 
-[phi,theta,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots);
+%%% hey nino %%% - this is not solved nicely, since Exp.CO writes into phi
+%%% and theta, then back further down, doesnt make any sense. but now
+%%% needed because i use several functions
+if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
+    Opt.Symmetry=symm(Sys);
+    [phi,theta,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots);
+else
+    phi=Exp.CrystalOrientation(:,1);
+    theta=Exp.CrystalOrientation(:,2);
+    %several crystal orientations are weighted the same for now
+    PowderWeight=ones(size(Exp.CrystalOrientation,1),1); 
+end
 nOrientations = numel(PowderWeight);
 
 % Pre-calculate spin Hamiltonian components in molecular frame
@@ -170,8 +184,8 @@ end
 if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe=1e-4; end
 if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump=1e-4; end
 if ~isfield(Opt.Threshold,'Iso')  Opt.Threshold.Iso=1e-3; end
-if ~isfield(Opt,'Output') 
-    Opt.Output='summed'; 
+if ~isfield(Opt,'Output')
+    Opt.Output='summed';
 else
     if ~strcmp(Opt.Output,'summed') && ~strcmp(Opt.Output,'separate')
         error('Please specify Opt.Output as summed or separate ')
