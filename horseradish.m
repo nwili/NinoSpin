@@ -34,12 +34,50 @@ if strcmp(Opt.Output,'summed')
     summedOutput=1;
 end
 
+if ~isfield(Sys,'singleiso') || ~Sys.singleiso
+    
+    
+    SysList = isotopologues(Sys,Opt.Threshold.Iso);
+    nIsotopologues = numel(SysList);
+    
+    PowderSimulation = 1;
+    appendSpectra = PowderSimulation && ~summedOutput;
+    if appendSpectra
+        spec = [];
+    else
+        spec = 0;
+    end
+    
+    % Loop over all components and isotopologues
+    for iIsotopologue = 1:nIsotopologues
+        
+        % Simulate single-isotopologue spectrum
+        Sys_ = SysList(iIsotopologue);
+        Sys_.singleiso = true;
+        [nu,spec_] = horseradish(Sys_,Exp,Opt);
+        
+        % Accumulate or append spectra
+        if appendSpectra
+            spec = [spec; spec_*Sys_.weight];
+        else
+            spec = spec + spec_*Sys_.weight;
+        end
+        
+    end
+    return
+end
 
 
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Simulation of single isotopologue
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Create Orientational Grid
 %%% hey nino %%% - you should add possibility of single crystals
+Opt.Symmetry=symm(Sys); 
 [phi,theta,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots);
 nOrientations = numel(PowderWeight);
 
@@ -125,14 +163,13 @@ if nargin==3
 else
     Opt=struct;
 end
-if ~isfield(Opt,'Symmetry') Opt.Symmetry=symm(Sys); end
 if ~isfield(Opt,'nKnots') Opt.nKnots=31; end
 if ~isfield(Opt,'Threshold')
     Opt.Threshold=struct;
 end
 if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe=1e-4; end
 if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump=1e-4; end
-if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Iso=1e-3; end
+if ~isfield(Opt.Threshold,'Iso')  Opt.Threshold.Iso=1e-3; end
 if ~isfield(Opt,'Output') Opt.Output='summed'; end
 
 end
