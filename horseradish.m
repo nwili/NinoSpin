@@ -18,13 +18,25 @@
 %     Opt      options structure
 %       Opt.Symmetry     symmetry of spin system
 %       Opt.nKnots       number of knots for the orientation grid
+%       Opt.Output       for Powders: 'summed': sum of isotopologues, else
+%                        'separate'
 %       Opt.Threshold.Probe    cutoff for transition selection
 %       Opt.Threshold.Pump     cutoff if HTA has an effect on
+%       Opt.Threshold.Iso      cutoff for inclusion of isotopologues
 
 function [nu,spec] = horseradish(varargin)
 
 if (nargin==0), help(mfilename); return; end
 [Sys,Exp,Opt]=ParseInputs(varargin{:});
+
+summedOutput=0;
+if strcmp(Opt.Output,'summed')
+    summedOutput=1;
+end
+
+
+
+
 
 % Create Orientational Grid
 %%% hey nino %%% - you should add possibility of single crystals
@@ -76,7 +88,7 @@ parfor iOrient=1:nOrientations
     
     %add up the spectrum from this powder orientation
     if ~isempty(Pos)
-        %get rid of peaks slightly outside range 
+        %get rid of peaks slightly outside range
         %cannot really be done earlier, because it needs the knowledge of connected transitions)
         Amp(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
         Pos(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
@@ -85,6 +97,8 @@ parfor iOrient=1:nOrientations
     
 end %end of powder loop
 
+
+%build final spectrum
 dnu = nu(2)-nu(1);
 spec = convspec(spec,dnu,Sys.lwEndor);
 
@@ -118,7 +132,8 @@ if ~isfield(Opt,'Threshold')
 end
 if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe=1e-4; end
 if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump=1e-4; end
-
+if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Iso=1e-3; end
+if ~isfield(Opt,'Output') Opt.Output='summed'; end
 
 end
 
@@ -180,7 +195,7 @@ for i_probe=1:size(TransFreqs,1)
                     if numel(unique([i_probe j_probe i_pump j_pump]))==3 && PumpWeights(i_pump,j_pump)
                         
                         Pos=[Pos TransFreqs(i_pump,j_pump)-TransFreqs(i_probe,j_probe)]; %postion of pumped transition wrt to observed one(not! the resonator. is this correct?)
-                                               
+                        
                         %calculate polarzation before and after pump
                         %pulse
                         PumpPops = Pops;
