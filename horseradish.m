@@ -170,7 +170,13 @@ end
 if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe=1e-4; end
 if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump=1e-4; end
 if ~isfield(Opt.Threshold,'Iso')  Opt.Threshold.Iso=1e-3; end
-if ~isfield(Opt,'Output') Opt.Output='summed'; end
+if ~isfield(Opt,'Output') 
+    Opt.Output='summed'; 
+else
+    if ~strcmp(Opt.Output,'summed') && ~strcmp(Opt.Output,'separate')
+        error('Please specify Opt.Output as summed or separate ')
+    end
+end
 
 end
 

@@ -54,9 +54,10 @@ Sys.Q = -32;
 Sys.lwEndor=0;
 
 %Options
-Opt.nKnots=10001; 
+Opt.nKnots=301; 
 Opt.Threshold.Probe=1e-4;
 Opt.Threshold.Pump=1e-4;
+Opt.Output='separate';
 
 % Define EDNMR parameters
 Exp.mwFreq=MWFQ;
@@ -77,34 +78,36 @@ Exp.Q=55;        % Q0 of the cavity (set 1 for no frequency dependence)
 Exp.Field=1176;
 
 % Calculate EDNMR spectrum of Cu
+tic
 [f_sim,spec_sim] =  horseradish(Sys,Exp,Opt);
-spec_sim=spec_sim/max(spec_sim);
+toc
+spec_sim=spec_sim/max(spec_sim(:));
 
-% plot(f_sim,spec_sim)
+plot(f_sim,spec_sim)
 
 %%
-figure(1)
-clf
-hold on
-
-ch = 100:950;
-f_exp=f_exp(ch);
-spec_exp=spec_exp(ch);
-
-plot(f_sim,spec_sim/2,'r','linewidth',2)
-
-[spec_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sim,f_exp,spec_exp,'lsq1');
-% spec_exp = rescale_n_lw(spec_exp,spec_sum_sim,'lsq1');
-
-
-plot(f_exp,spec_sim,'r','linewidth',2)
-plot(f_exp,spec_exp,'k')
-residuals=(spec_sim-spec_exp');
-noise_estimate=rms(residuals);
-plot(f_exp,residuals-2*noise_estimate)
-
-lw_min
-alpha_min
-SNR=max(spec_sim)/noise_estimate
-
-% axis([-400 -120 ylim])
+% figure(1)
+% clf
+% hold on
+% 
+% ch = 100:950;
+% f_exp=f_exp(ch);
+% spec_exp=spec_exp(ch);
+% 
+% plot(f_sim,spec_sim/2,'r','linewidth',2)
+% 
+% [spec_sim,lw_min,alpha_min] = rescale_n_lw(f_sim,spec_sim,f_exp,spec_exp,'lsq1');
+% % spec_exp = rescale_n_lw(spec_exp,spec_sum_sim,'lsq1');
+% 
+% 
+% plot(f_exp,spec_sim,'r','linewidth',2)
+% plot(f_exp,spec_exp,'k')
+% residuals=(spec_sim-spec_exp');
+% noise_estimate=rms(residuals);
+% plot(f_exp,residuals-2*noise_estimate)
+% 
+% lw_min
+% alpha_min
+% SNR=max(spec_sim)/noise_estimate
+% 
+% % axis([-400 -120 ylim])
