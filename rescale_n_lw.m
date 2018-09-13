@@ -18,23 +18,24 @@
 
 function [spec_sim_new,lw_min,alpha_min]=rescale_n_lw(f_sim,ysim,f_exp,yexp,mode)
 
-ysim=interp1(f_sim,ysim,f_exp);
 
-target=@(x) sum((BroadSpec(ysim,f_exp,yexp,mode,x(1),x(2))-yexp').^2);
+target=@(x) sum((BroadSpec(f_sim,ysim,f_exp,yexp,mode,x(1),x(2))-yexp').^2);
 fit_result=fminsearch( target,[2 ;rand]);
 
 lw_min=fit_result(1);
 alpha_min=1/2*sin(fit_result(2))+1/2;
 
-spec_sim_new=BroadSpec(ysim,f_exp,yexp,mode,lw_min,alpha_min);
+spec_sim_new=BroadSpec(f_sim,ysim,f_exp,yexp,mode,lw_min,alpha_min);
 end
 
-function ynew=BroadSpec(ysim,f_exp,yexp,mode,lw,alpha)
+function ynew=BroadSpec(f_sim,ysim,f_exp,yexp,mode,lw,alpha)
 
 alpha=1/2*sin(alpha)+1/2;
-df=f_exp(2)-f_exp(1);
+df=f_sim(2)-f_sim(1);
 
 ynew=convspec(ysim,df,lw,0,alpha);
+
+ynew=interp1(f_sim,ynew,f_exp);
 ynew=rescale(ynew,yexp,mode);
 
 end

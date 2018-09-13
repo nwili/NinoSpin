@@ -14,7 +14,7 @@
 %       Exp.tHTA         HTA pulse length, in us
 %       Exp.nu1          nu1, in MHz, normalized for spin1/2 with g=gfree
 %       Exp.Tm           decay time of electron coherences, in us
-%       Exp.Temperature  Temperature in K for inital density matrix
+%       Exp.Temperature
 %     Opt      options structure
 %       Opt.Symmetry     symmetry of spin system
 %       Opt.nKnots       number of knots for the orientation grid
@@ -66,11 +66,11 @@ parfor iOrient=1:nOrientations
     end
     
     % Calculate W1(HTA) at EDNMR position using experimental loaded Q-value
-    w1 = 2*pi*Expl.nu1*sqrt(1./(1+(TransOffsets*4*Expl.Q/(Expl.mwFreq)).^2/4));
+    w1 = 2*pi*Exp.nu1*sqrt(1./(1+(TransOffsets*4*Exp.Q/(Exp.mwFreq)).^2/4));
     
-    PumpWeights=(1-Bloch(w1,Expl.tHTA,Probabilities,Expl.Tm))/2; %between 0, and 1 (inversion)
+    PumpWeights=(1-Bloch(w1,Exp.tHTA,Probabilities,Exp.Tm))/2; %between 0, and 1 (inversion)
     PumpWeights(PumpWeights<Opt.Threshold.Pump)=0;  % apply cutoff
-    PumpWeights(TransOffsets<Expl.Range(1) | TransOffsets>Expl.Range(2))=0; % only hit when within range
+    PumpWeights(TransOffsets<Exp.Range(1) | TransOffsets>Exp.Range(2))=0; % only hit when within range
     
     [Amp, Pos]=EDNMR_PeakList(TransFreqs,ProbeWeights,PumpWeights,Populations);
     
@@ -78,9 +78,9 @@ parfor iOrient=1:nOrientations
     if ~isempty(Pos)
         %get rid of peaks slightly outside range 
         %cannot really be done earlier, because it needs the knowledge of connected transitions)
-        Amp(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
-        Pos(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
-        spec=spec+PowderWeight(iOrient)*makespec(Expl.Range,Expl.nPoints,Pos,Amp);
+        Amp(Pos<Exp.Range(1) | Pos>Exp.Range(2))=[];
+        Pos(Pos<Exp.Range(1) | Pos>Exp.Range(2))=[];
+        spec=spec+PowderWeight(iOrient)*makespec(Exp.Range,Exp.nPoints,Pos,Amp);
     end
     
 end %end of powder loop

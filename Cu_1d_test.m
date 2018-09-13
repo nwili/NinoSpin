@@ -51,23 +51,24 @@ Sys.A=[50 612];
 Sys.AFrame=[0 0 0]/180*pi;
 % Sys.HStrain = [100 100];
 Sys.Q = -32;
-Sys.lwEndor=0.1;
+Sys.lwEndor=0;
 
 %Options
 Opt.Symmetry = symm(Sys); 
-Opt.nKnots=3001; 
-Opt.method='matrix';
-
+Opt.nKnots=10001; 
+Opt.Threshold.Probe=1e-4;
+Opt.Threshold.Pump=1e-4;
 
 % Define EDNMR parameters
 Exp.mwFreq=MWFQ;
-Exp.ExciteWidth=7;
-Exp.nPoints=2048;
+Exp.ExciteWidth=20;
+Exp.nPoints=2048*2;
 Exp.Range = [-500 0];
 Exp.nu1=2; % nu1 in MHz
-Exp.Tm=1;      % decay time of ENDMR nutations in us
+Exp.Tm=1.5;      % decay time of ENDMR nutations in us
 Exp.tHTA=10;    % HTA pulse length in us
 Exp.Q=55;        % Q0 of the cavity (set 1 for no frequency dependence)
+
 
 % load resprofile_sca10000;
 % pulse_scale = 0.02;
