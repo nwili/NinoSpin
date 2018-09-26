@@ -1,6 +1,6 @@
 % rescale     Rescaling of one spectrum so that it fits a second
 %
-%   ynew = rescale_n_lw(y,yref,mode2)
+%   ynew = rescale_n_lw(f_sim,ysim,f_exp,yexp,mode)
 %
 %   Shifts and rescales the spectrum y. If given, ynew serves
 %   as the reference. The rescaled y is returned in ynew.
@@ -33,9 +33,12 @@ function ynew=BroadSpec(f_sim,ysim,f_exp,yexp,mode,lw,alpha)
 alpha=1/2*sin(alpha)+1/2;
 df=f_sim(2)-f_sim(1);
 
+ysim(isnan(ysim))=0;
 ynew=convspec(ysim,df,lw,0,alpha);
 
 ynew=interp1(f_sim,ynew,f_exp);
+ynew(isnan(ynew))=0;
+ynew=ynew.*logical(yexp)';
 ynew=rescale(ynew,yexp,mode);
 
 end
