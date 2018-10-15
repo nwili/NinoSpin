@@ -22,7 +22,7 @@
 %                        'separate'
 %       Opt.Threshold.Probe    cutoff for transition selection
 %       Opt.Threshold.Pump     cutoff if HTA has an effect on
-%       Opt.Threshold.Iso      cutoff for inclusion of isotopologues
+%       Opt.Threshold.Iso      cutoff for inclusion of isotopologues       
 
 function [nu,spec] = horseradish(varargin)
 
@@ -87,9 +87,13 @@ end
 if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
     Opt.Symmetry=symm(Sys);
     [phi,theta,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots);
+    euler3=zeros(size(phi)); 
+    Exp.ThirdEulerAverage = 1; %integration over the third euler angle is achieved by calculating x and y only.
 else
     phi=Exp.CrystalOrientation(:,1);
     theta=Exp.CrystalOrientation(:,2);
+    euler3=Exp.CrystalOrientation(:,3);
+    Exp.ThirdEulerAverage = 0; %the third euler average is accounted for explicitly
     %several crystal orientations are weighted the same for now
     PowderWeight=ones(size(Exp.CrystalOrientation,1),1); 
 end
@@ -108,7 +112,7 @@ parfor iOrient=1:nOrientations
     
     Expl=Exp;
     Expl.mwFreq=Expl.mwFreq*1e3; %GHz to MHz
-    Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) 0];
+    Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) euler3(iOrient)];
     % calculate energy levels and probabilites between them
     [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Expl,Opt);
     
@@ -209,8 +213,11 @@ H0 = Hzf + Exp.Field*zeemanop(zL);
 EnergyLevels = diag(Hd); %Energy levels
 
 gamma=gfree*bmagn/planck*1e-9; %MHz/mT
-Probabilities = 2/gamma^2*(abs(U'*zeemanop(xL)*U).^2+abs(U'*zeemanop(yL)*U).^2);
-%%% hey nino %%%- is this the right way to integrate over the third angle?
+if Exp.ThirdEulerAverage %average is done ad hoc over x and y only
+    Probabilities = 2/gamma^2*(abs(U'*zeemanop(xL)*U).^2+abs(U'*zeemanop(yL)*U).^2);
+else
+    Probabilities = 2*2/gamma^2*(abs(U'*zeemanop(xL)*U).^2);
+end
 
 end
 
