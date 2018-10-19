@@ -85,15 +85,19 @@ end
 %%% and theta, then back further down, doesnt make any sense. but now
 %%% needed because i use several functions
 if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
-    Opt.Symmetry=symm(Sys);
-    [phi,theta,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots);
-    euler3=zeros(size(phi)); 
-    Exp.ThirdEulerAverage = 1; %integration over the third euler angle is achieved by calculating x and y only.
+    %get symmetry group and symmetry frame (otherwise, the weighting will be incorrect)
+    [Opt.Symmetry,Opt.SymmFrame] = symm(Sys);
+    % Get orientations for the knots, molecular frame.
+    [Vecs,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots(1),'cf');
+    % Transform vector to reference frame representation and convert to polar angles.
+    [phi,theta] = vec2ang(Opt.SymmFrame*Vecs);
+    chi=zeros(size(phi)); 
+    Exp.AverageOverChi = 1; %integration over the third euler angle is achieved by calculating x and y only.
 else
     phi=Exp.CrystalOrientation(:,1);
     theta=Exp.CrystalOrientation(:,2);
-    euler3=Exp.CrystalOrientation(:,3);
-    Exp.ThirdEulerAverage = 0; %the third euler average is accounted for explicitly
+    chi=Exp.CrystalOrientation(:,3);
+    Exp.AverageOverChi = 0; %the third euler average is accounted for explicitly
     %several crystal orientations are weighted the same for now
     PowderWeight=ones(size(Exp.CrystalOrientation,1),1); 
 end
@@ -112,7 +116,7 @@ parfor iOrient=1:nOrientations
     
     Expl=Exp;
     Expl.mwFreq=Expl.mwFreq*1e3; %GHz to MHz
-    Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) euler3(iOrient)];
+    Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) chi(iOrient)];
     % calculate energy levels and probabilites between them
     [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Expl,Opt);
     
@@ -213,7 +217,7 @@ H0 = Hzf + Exp.Field*zeemanop(zL);
 EnergyLevels = diag(Hd); %Energy levels
 
 gamma=gfree*bmagn/planck*1e-9; %MHz/mT
-if Exp.ThirdEulerAverage %average is done ad hoc over x and y only
+if Exp.AverageOverChi %average is done ad hoc over x and y only
     Probabilities = 2/gamma^2*(abs(U'*zeemanop(xL)*U).^2+abs(U'*zeemanop(yL)*U).^2);
 else
     Probabilities = 2*2/gamma^2*(abs(U'*zeemanop(xL)*U).^2);

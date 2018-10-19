@@ -391,7 +391,7 @@ for ii=1:length(dta)
         [~,ref_echo] = max(absofsum(:));
         
         % use this echo to inform about the digitizer scale
-        max_amp = max(dta{ii}(ran_echomax,ref_echo));
+        max_amp = max(dta{ii}(ran_echomax,ref_echo))/nAvgs;
         dig_level = max_amp / trace_maxlev;
         
         if isfield(conf.std,'IFgain_levels')
