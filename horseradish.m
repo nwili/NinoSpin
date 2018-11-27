@@ -1,5 +1,7 @@
 % horseradish:   Calculate EDNMR spectrum for arbitrary spin system
 %
+%   Written for EasySpin 6.0-alpha1, probably works for older version, too.
+%
 %   [nu,spec] = horseradish(Sys,Exp)
 %   ... = horseradish(Sys,Exp,Opt)
 %
@@ -10,11 +12,14 @@
 %       Exp.Range        mw offset range [min max], in MHz
 %       Exp.nPoints      number of points
 %       Exp.ExciteWidth  excitation bandwidth, in MHz
-%       Exp.Q            Q0 of the cavity
+%       Exp.Q            Q of the cavity
 %       Exp.tHTA         HTA pulse length, in us
 %       Exp.nu1          nu1, in MHz, normalized for spin1/2 with g=gfree
 %       Exp.Tm           decay time of electron coherences, in us
 %       Exp.Temperature  Temperature in K for inital density matrix
+%       Exp.CrystalOrientation Orientation of the Crystallite, can be a
+%                        vector
+%       Exp.CrystalWeight Weights of the CrystalOrientation vectors
 %     Opt      options structure
 %       Opt.Symmetry     symmetry of spin system
 %       Opt.nKnots       number of knots for the orientation grid
@@ -22,24 +27,46 @@
 %                        'separate'
 %       Opt.Threshold.Probe    cutoff for transition selection
 %       Opt.Threshold.Pump     cutoff if HTA has an effect on
-%       Opt.Threshold.Iso      cutoff for inclusion of isotopologues       
+%       Opt.Threshold.Iso      cutoff for inclusion of isotopologues
+%
+%
+%  The simulation code here is heavily based on
+%  "N.Cox, A. Nalepa, W. Lubitz, A. Savitsky, Journal of Magnetic
+%  Resonance, 2017, 280, 63-78" and the deposited code on the EasySpin
+%  Forum. http://easyspin.org/forum/viewtopic.php?f=8&t=404
+%
+%  The generation of Isotopologues and the recursive call of the function
+%  was written by peeking into the code for the salt() routine of EasySpin
+%
+%
+% Nino Wili, ETH Zurich 26.11.2018
 
 function [nu,spec] = horseradish(varargin)
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                  Householding and Bookkeeping                           %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%Display help if no input is given
 if (nargin==0), help(mfilename); return; end
+
+%check input and put in default values if needed
 [Sys,Exp,Opt]=ParseInputs(varargin{:});
 
+%check whether isotopologues subspectra or all should be given in output
 summedOutput=0;
 if strcmp(Opt.Output,'summed')
     summedOutput=1;
 end
 
+%check whether the function was not called by a single isotopologues
 if ~isfield(Sys,'singleiso') || ~Sys.singleiso
     
-    
+    %generate isotopologues list
     SysList = isotopologues(Sys,Opt.Threshold.Iso);
     nIsotopologues = numel(SysList);
     
+    %check whether a PowderSimulation was requested
     PowderSimulation = ~isfield(Exp,'CrystalOrientation')  || isempty(Exp.CrystalOrientation);
     
     if ~PowderSimulation && ~summedOutput && nIsotopologues<2
@@ -73,17 +100,11 @@ if ~isfield(Sys,'singleiso') || ~Sys.singleiso
 end
 
 
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Simulation of single isotopologue
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%               Simulation of single isotopologue                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Create Orientational Grid
-%%% hey nino %%% - this is not solved nicely, since Exp.CO writes into phi
-%%% and theta, then back further down, doesnt make any sense. but now
-%%% needed because i use several functions
 if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
     %get symmetry group and symmetry frame (otherwise, the weighting will be incorrect)
     [Opt.Symmetry,Opt.SymmFrame] = symm(Sys);
@@ -91,15 +112,18 @@ if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
     [Vecs,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots(1),'cf');
     % Transform vector to reference frame representation and convert to polar angles.
     [phi,theta] = vec2ang(Opt.SymmFrame*Vecs);
-    chi=zeros(size(phi)); 
+    chi=zeros(size(phi));
     Exp.AverageOverChi = 1; %integration over the third euler angle is achieved by calculating x and y only.
 else
     phi=Exp.CrystalOrientation(:,1);
     theta=Exp.CrystalOrientation(:,2);
     chi=Exp.CrystalOrientation(:,3);
     Exp.AverageOverChi = 0; %the third euler average is accounted for explicitly
-    %several crystal orientations are weighted the same for now
-    PowderWeight=ones(size(Exp.CrystalOrientation,1),1); 
+    if isfield(Exp,'CrystalWeight')
+        PowderWeight=Exp.CrystalWeight;
+    else
+        PowderWeight=ones(size(Exp.CrystalOrientation,1),1);
+    end
 end
 nOrientations = numel(PowderWeight);
 
@@ -114,9 +138,10 @@ zeemanop = @(v) v(1)*GxM + v(2)*GyM + v(3)*GzM;
 % loop over orientations
 parfor iOrient=1:nOrientations
     
-    Expl=Exp;
+    Expl=Exp; %local copy for the parallel loop
     Expl.mwFreq=Expl.mwFreq*1e3; %GHz to MHz
     Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) chi(iOrient)];
+    
     % calculate energy levels and probabilites between them
     [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Expl,Opt);
     
@@ -141,6 +166,8 @@ parfor iOrient=1:nOrientations
     % Calculate W1(HTA) at EDNMR position using experimental loaded Q-value
     w1 = 2*pi*Expl.nu1*sqrt(1./(1+(TransOffsets*4*Expl.Q/(Expl.mwFreq)).^2/4));
     
+    
+    % calculate the Pump Weights using the bloch equations
     PumpWeights=(1-Bloch(w1,Expl.tHTA,Probabilities,Expl.Tm))/2; %between 0, and 1 (inversion)
     PumpWeights(PumpWeights<Opt.Threshold.Pump)=0;  % apply cutoff
     PumpWeights(TransOffsets<Expl.Range(1) | TransOffsets>Expl.Range(2))=0; % only hit when within range
@@ -228,6 +255,7 @@ end
 function [Mz] = Bloch(w1,t,P,Tm)
 
 %for now assuming  [0 0 1] as startingvector
+% analytical solution of Mz in the presence of transverse relaxation
 
 fac = exp(-t/(2*Tm));
 Ch = cosh(t*sqrt(1-4*P.*Tm.^2.*w1.^2)/(2*Tm));
@@ -260,19 +288,22 @@ for i_probe=1:size(TransFreqs,1)
                     
                     %only transitions connected to the probe and affected
                     %by HTA are considered
+                    % the first condition is fulfilled if and only if
+                    % exactly one level is shared
                     if numel(unique([i_probe j_probe i_pump j_pump]))==3 && PumpWeights(i_pump,j_pump)
                         
-                        Pos=[Pos TransFreqs(i_pump,j_pump)-TransFreqs(i_probe,j_probe)]; %postion of pumped transition wrt to observed one(not! the resonator. is this correct?)
+                        Pos=[Pos TransFreqs(i_pump,j_pump)-TransFreqs(i_probe,j_probe)]; %postion of pumped transition wrt to observed one(not! the resonator.)
                         
-                        %calculate polarzation before and after pump
-                        %pulse
+                        %calculate populations after the pump pulse
                         PumpPops = Pops;
                         PumpPops(i_pump)=CosPump(i_pump,j_pump)*Pops(i_pump)+(1-CosPump(i_pump,j_pump))*Pops(j_pump);
                         PumpPops(j_pump)=CosPump(i_pump,j_pump)*Pops(j_pump)+(1-CosPump(i_pump,j_pump))*Pops(i_pump);
                         
+                        %calculate polarization difference of the probed
+                        %transition
                         PolDif = (PumpPops(j_probe)-PumpPops(i_probe))-(Pops(j_probe)-Pops(i_probe));
                         
-                        %calculate peak amplitude
+                        %calculate peak amplitude and append to list
                         Amp=[Amp PolDif*ProbeWeights(i_probe,j_probe)];
                     end
                     
@@ -285,3 +316,21 @@ for i_probe=1:size(TransFreqs,1)
 end
 
 end %end of peak function
+
+% Here is a list of some of the best albums. They are all relatively modern, 
+% and are a snapshot of the current personal taste of the author:
+%
+% (Artist - Album Title)
+%
+%             --- Arcane Roots - Blood and Chemistry ---
+% Arcane Roots have been one of the best progressive Rock bands of the last
+% few years. They combine some really edgy, twisted and heavy riffs with
+% catchy choruses. I stumbled upon them on spotify. They were probably
+% suggested to me becauseI listened to a lot of Biffy Clyro. Amazingly, I
+% just clicked on them because the Album title contains "Chemistry".
+% The first track, "Energy is never lost, just redirected" starts
+% relatively boring, but boy, I was hooked by the main riff as soon as it
+% started. Amazing.
+% Start with: "Energy is never lost, just redirected", or "Sacred Shapes"
+%
+%
