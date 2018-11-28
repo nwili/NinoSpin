@@ -51,12 +51,12 @@ function [nu,spec] = horseradish(varargin)
 if (nargin==0), help(mfilename); return; end
 
 %check input and put in default values if needed
-[Sys,Exp,Opt]=ParseInputs(varargin{:});
+[Sys,Exp,Opt] = ParseInputs(varargin{:});
 
 %check whether isotopologues subspectra or all should be given in output
-summedOutput=0;
+summedOutput = 0;
 if strcmp(Opt.Output,'summed')
-    summedOutput=1;
+    summedOutput = 1;
 end
 
 %check whether the function was not called by a single isotopologues
@@ -112,17 +112,17 @@ if ~isfield(Exp,'CrystalOrientation') || isempty(Exp.CrystalOrientation)
     [Vecs,PowderWeight] = sphgrid(Opt.Symmetry,Opt.nKnots(1),'cf');
     % Transform vector to reference frame representation and convert to polar angles.
     [phi,theta] = vec2ang(Opt.SymmFrame*Vecs);
-    chi=zeros(size(phi));
+    chi = zeros(size(phi));
     Exp.AverageOverChi = 1; %integration over the third euler angle is achieved by calculating x and y only.
 else
-    phi=Exp.CrystalOrientation(:,1);
-    theta=Exp.CrystalOrientation(:,2);
-    chi=Exp.CrystalOrientation(:,3);
+    phi = Exp.CrystalOrientation(:,1);
+    theta = Exp.CrystalOrientation(:,2);
+    chi = Exp.CrystalOrientation(:,3);
     Exp.AverageOverChi = 0; %the third euler average is accounted for explicitly
     if isfield(Exp,'CrystalWeight')
-        PowderWeight=Exp.CrystalWeight;
+        PowderWeight = Exp.CrystalWeight;
     else
-        PowderWeight=ones(size(Exp.CrystalOrientation,1),1);
+        PowderWeight = ones(size(Exp.CrystalOrientation,1),1);
     end
 end
 nOrientations = numel(PowderWeight);
@@ -133,30 +133,30 @@ zeemanop = @(v) v(1)*GxM + v(2)*GyM + v(3)*GzM;
 
 % initialize output
 %%% hey nino %%% - think about possible outputs as per orientation
-[nu,spec]=makespec(Exp.Range,Exp.nPoints,Exp.Range+[eps -eps],[0 0]);
+[nu,spec] = makespec(Exp.Range,Exp.nPoints,Exp.Range+[eps -eps],[0 0]);
 
 % loop over orientations
-parfor iOrient=1:nOrientations
+parfor iOrient = 1:nOrientations
     
-    Expl=Exp; %local copy for the parallel loop
-    Expl.mwFreq=Expl.mwFreq*1e3; %GHz to MHz
-    Expl.CrystalOrientation = [phi(iOrient) theta(iOrient) chi(iOrient)];
+    Exp_  = Exp; %local copy for the parallel loop
+    Exp_ .mwFreq = Exp_ .mwFreq*1e3; %GHz to MHz
+    Exp_ .CrystalOrientation = [phi(iOrient) theta(iOrient) chi(iOrient)];
     
     % calculate energy levels and probabilites between them
-    [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Expl,Opt);
+    [EnergyLevels, Probabilities] = SolveEigenProblem(Hzf,zeemanop,Exp_ ,Opt);
     
     % get populations
     %%% hey nino %%% - make user-supplied starting states possible
-    Populations=diag(  sigeq(diag(EnergyLevels),Expl.Temperature)  );
+    Populations = diag(  sigeq(diag(EnergyLevels),Exp_ .Temperature)  );
     
     % transition frequencies between levels in MHz
     TransFreqs = abs(EnergyLevels-EnergyLevels');
-    TransOffsets = (TransFreqs-Expl.mwFreq);
+    TransOffsets = (TransFreqs-Exp_ .mwFreq);
     
     %calculate probe weight of each transition -  ensures orientation
     %selection
-    ProbeWeights = Probabilities.*exp(-2*((TransFreqs-Expl.mwFreq)/Expl.ExciteWidth).^2);
-    ProbeWeights(ProbeWeights<Opt.Threshold.Probe)=0; %apply cutoff
+    ProbeWeights = Probabilities.*exp(-2*((TransFreqs-Exp_ .mwFreq)/Exp_ .ExciteWidth).^2);
+    ProbeWeights(ProbeWeights<Opt.Threshold.Probe) = 0; %apply cutoff
     
     
     if ~any(ProbeWeights) %abort this orientation if now transition is observed
@@ -164,23 +164,23 @@ parfor iOrient=1:nOrientations
     end
     
     % Calculate W1(HTA) at EDNMR position using experimental loaded Q-value
-    w1 = 2*pi*Expl.nu1*sqrt(1./(1+(TransOffsets*4*Expl.Q/(Expl.mwFreq)).^2/4));
+    w1 = 2*pi*Exp_ .nu1*sqrt(1./(1+(TransOffsets*4*Exp_ .Q/(Exp_ .mwFreq)).^2/4));
     
     
     % calculate the Pump Weights using the bloch equations
-    PumpWeights=(1-Bloch(w1,Expl.tHTA,Probabilities,Expl.Tm))/2; %between 0, and 1 (inversion)
-    PumpWeights(PumpWeights<Opt.Threshold.Pump)=0;  % apply cutoff
-    PumpWeights(TransOffsets<Expl.Range(1) | TransOffsets>Expl.Range(2))=0; % only hit when within range
+    PumpWeights = (1-Bloch(w1,Exp_ .tHTA,Probabilities,Exp_ .Tm))/2; %between 0, and 1 (inversion)
+    PumpWeights(PumpWeights<Opt.Threshold.Pump) = 0;  % apply cutoff
+    PumpWeights(TransOffsets<Exp_ .Range(1) | TransOffsets>Exp_ .Range(2)) = 0; % only hit when within range
     
-    [Amp, Pos]=EDNMR_PeakList(TransFreqs,ProbeWeights,PumpWeights,Populations);
+    [Amp, Pos] = EDNMR_PeakList(TransFreqs,ProbeWeights,PumpWeights,Populations);
     
     %add up the spectrum from this powder orientation
     if ~isempty(Pos)
         %get rid of peaks slightly outside range
         %cannot really be done earlier, because it needs the knowledge of connected transitions)
-        Amp(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
-        Pos(Pos<Expl.Range(1) | Pos>Expl.Range(2))=[];
-        spec=spec+PowderWeight(iOrient)*makespec(Expl.Range,Expl.nPoints,Pos,Amp);
+        Amp(Pos<Exp_ .Range(1) | Pos>Exp_ .Range(2)) = [];
+        Pos(Pos<Exp_ .Range(1) | Pos>Exp_ .Range(2)) = [];
+        spec = spec+PowderWeight(iOrient)*makespec(Exp_ .Range,Exp_ .nPoints,Pos,Amp);
     end
     
 end %end of powder loop
@@ -192,7 +192,7 @@ spec = convspec(spec,dnu,Sys.lwEndor);
 
 end % end of main function
 
-function [Sys,Exp,Opt]=ParseInputs(varargin)
+function [Sys,Exp,Opt] = ParseInputs(varargin)
 
 % Guard against wrong number of input or output arguments.
 if (nargin<1), error('Please supply a spin system as first parameter.'); end
@@ -202,25 +202,25 @@ if (nargin>3), error('Too many input arguments, the maximum is three.'); end
 if (nargout>4), error('Too many output arguments.'); end
 
 % Put vargin into structures, check, and add default values
-Sys=varargin{1};
-Exp=varargin{2};
+Sys = varargin{1};
+Exp = varargin{2};
 %%% hey nino %%% - you should add some more Exp-checks here
-if ~isfield(Exp,'Temperature') Exp.Temperature=300; end
+if ~isfield(Exp,'Temperature') Exp.Temperature = 300; end
 
 if nargin==3
-    Opt=varargin{3};
+    Opt = varargin{3};
 else
-    Opt=struct;
+    Opt = struct;
 end
-if ~isfield(Opt,'nKnots') Opt.nKnots=31; end
+if ~isfield(Opt,'nKnots') Opt.nKnots = 31; end
 if ~isfield(Opt,'Threshold')
-    Opt.Threshold=struct;
+    Opt.Threshold = struct;
 end
-if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe=1e-4; end
-if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump=1e-4; end
-if ~isfield(Opt.Threshold,'Iso')  Opt.Threshold.Iso=1e-3; end
+if ~isfield(Opt.Threshold,'Probe')  Opt.Threshold.Probe = 1e-4; end
+if ~isfield(Opt.Threshold,'Pump')  Opt.Threshold.Pump = 1e-4; end
+if ~isfield(Opt.Threshold,'Iso')  Opt.Threshold.Iso = 1e-3; end
 if ~isfield(Opt,'Output')
-    Opt.Output='summed';
+    Opt.Output = 'summed';
 else
     if ~strcmp(Opt.Output,'summed') && ~strcmp(Opt.Output,'separate')
         error('Please specify Opt.Output as summed or separate ')
@@ -229,7 +229,7 @@ end
 
 end
 
-function [EnergyLevels, Probabilities]=SolveEigenProblem(Hzf,zeemanop,Exp,Opt)
+function [EnergyLevels, Probabilities] = SolveEigenProblem(Hzf,zeemanop,Exp,Opt)
 
 % Set up lab axes for this orientation
 [xL,yL,zL] = erot(Exp.CrystalOrientation,'rows');
@@ -243,7 +243,7 @@ H0 = Hzf + Exp.Field*zeemanop(zL);
 [U,Hd] = eig(H0);
 EnergyLevels = diag(Hd); %Energy levels
 
-gamma=gfree*bmagn/planck*1e-9; %MHz/mT
+gamma = gfree*bmagn/planck*1e-9; %MHz/mT
 if Exp.AverageOverChi %average is done ad hoc over x and y only
     Probabilities = 2/gamma^2*(abs(U'*zeemanop(xL)*U).^2+abs(U'*zeemanop(yL)*U).^2);
 else
@@ -264,27 +264,24 @@ Mz = fac.*(Ch + Sh./(sqrt(1-4*P.*Tm.^2.*w1.^2)));
 
 end
 
-function [Amp, Pos]=EDNMR_PeakList(TransFreqs,ProbeWeights,PumpWeights,Populations)
+function [Amp, Pos] = EDNMR_PeakList(TransFreqs,ProbeWeights,PumpWeights,Populations)
 
 %initalize output
-Pos=[];
-Amp=[];
-
-%get cosine of flip anlge from weight
-CosPump=-2*PumpWeights+1;
+Pos = [];
+Amp = [];
 
 %abbreviations
-Pops=Populations;
+Pops = Populations;
 
 %loop over all probe transition
-for i_probe=1:size(TransFreqs,1)
-    for j_probe=(i_probe+1):size(TransFreqs,2)
+for i_probe = 1:size(TransFreqs,1)
+    for j_probe = (i_probe+1):size(TransFreqs,2)
         
         if ProbeWeights(i_probe,j_probe)
             
             %loop over all pump transition
             for i_pump = 1:size(TransFreqs,1)
-                for j_pump=(i_pump+1):size(TransFreqs,2)
+                for j_pump = (i_pump+1):size(TransFreqs,2)
                     
                     %only transitions connected to the probe and affected
                     %by HTA are considered
@@ -292,19 +289,19 @@ for i_probe=1:size(TransFreqs,1)
                     % exactly one level is shared
                     if numel(unique([i_probe j_probe i_pump j_pump]))==3 && PumpWeights(i_pump,j_pump)
                         
-                        Pos=[Pos TransFreqs(i_pump,j_pump)-TransFreqs(i_probe,j_probe)]; %postion of pumped transition wrt to observed one(not! the resonator.)
+                        Pos = [Pos TransFreqs(i_pump,j_pump)-TransFreqs(i_probe,j_probe)]; %postion of pumped transition wrt to observed one(not! the resonator.)
                         
                         %calculate populations after the pump pulse
                         PumpPops = Pops;
-                        PumpPops(i_pump)=CosPump(i_pump,j_pump)*Pops(i_pump)+(1-CosPump(i_pump,j_pump))*Pops(j_pump);
-                        PumpPops(j_pump)=CosPump(i_pump,j_pump)*Pops(j_pump)+(1-CosPump(i_pump,j_pump))*Pops(i_pump);
+                        PumpPops(i_pump) = (1-PumpWeights(i_pump,j_pump))*Pops(i_pump)+PumpWeights(i_pump,j_pump)*Pops(j_pump);
+                        PumpPops(j_pump) = (1-PumpWeights(i_pump,j_pump))*Pops(j_pump)+PumpWeights(i_pump,j_pump)*Pops(i_pump);
                         
                         %calculate polarization difference of the probed
                         %transition
                         PolDif = (PumpPops(j_probe)-PumpPops(i_probe))-(Pops(j_probe)-Pops(i_probe));
                         
                         %calculate peak amplitude and append to list
-                        Amp=[Amp PolDif*ProbeWeights(i_probe,j_probe)];
+                        Amp = [Amp PolDif*ProbeWeights(i_probe,j_probe)];
                     end
                     
                 end
