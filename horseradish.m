@@ -39,7 +39,7 @@
 %  was written by peeking into the code for the salt() routine of EasySpin
 %
 %
-% Nino Wili, ETH Zurich 26.11.2018
+% Nino Wili, ETH Zurich Nov 2018, nino.wili@phys.chem.ethz.ch
 
 function [nu,spec] = horseradish(varargin)
 
@@ -314,20 +314,23 @@ end
 
 end %end of peak function
 
-% Here is a list of some of the best albums. They are all relatively modern, 
-% and are a snapshot of the current personal taste of the author:
-%
-% (Artist - Album Title)
-%
-%             --- Arcane Roots - Blood and Chemistry ---
-% Arcane Roots have been one of the best progressive Rock bands of the last
-% few years. They combine some really edgy, twisted and heavy riffs with
-% catchy choruses. I stumbled upon them on spotify. They were probably
-% suggested to me becauseI listened to a lot of Biffy Clyro. Amazingly, I
-% just clicked on them because the Album title contains "Chemistry".
-% The first track, "Energy is never lost, just redirected" starts
-% relatively boring, but boy, I was hooked by the main riff as soon as it
-% started. Amazing.
-% Start with: "Energy is never lost, just redirected", or "Sacred Shapes"
-%
-%
+
+
+
+% Denä wos guät geit, 
+% giängs besser, 
+% giängs denä besser, 
+% wos weniger guät geit, 
+% was aber nid geit 
+% ohni dases denä 
+% weniger guät geit, 
+% wos guät get.
+
+% Drum geit weni, 
+% für dases denä 
+% besser geit, 
+% wos weniger guät geit. 
+% Und drum geits o denä nid besser, 
+% wos guät geit.
+% 
+% Mani Matter - 1970
