@@ -8,6 +8,7 @@
 %   Input:
 %     Sys      spin system structure
 %     Exp      experiment structure
+%       Exp.mwFreq       mw observer Frequency
 %       Exp.Field        magnetic field, in mT
 %       Exp.Range        mw offset range [min max], in MHz
 %       Exp.nPoints      number of points

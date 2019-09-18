@@ -1,9 +1,11 @@
-% rescale     Rescaling of one spectrum so that it fits a second
+% rescale_n_lw     Broadening and rescaling of one spectrum so that it fits a second
+% needs the EasySpin function rescale
 %
-%   ynew = rescale_n_lw(f_sim,ysim,f_exp,yexp,mode)
+%   [spec_sim_new,lw_min,alpha_min]=rescale_n_lw(f_sim,ysim,f_exp,yexp,mode)
 %
-%   Shifts and rescales the spectrum y. If given, ynew serves
-%   as the reference. The rescaled y is returned in ynew.
+%   Shifts and rescales the spectrum ysim. If given, yexp serves
+%   as the reference. The rescaled spectrum is returned in spec_sim_new. 
+%   if the x-axes are given. The fitted spectrum is resampled.
 %
 %
 %   mode:
@@ -23,14 +25,14 @@ target=@(x) sum((BroadSpec(f_sim,ysim,f_exp,yexp,mode,x(1),x(2))-yexp').^2);
 fit_result=fminsearch( target,[2 ;rand]);
 
 lw_min=fit_result(1);
-alpha_min=1/2*sin(fit_result(2))+1/2;
+alpha_min=1/2*sin(fit_result(2))+1/2; % alpha can only be between 0 and 1
 
 spec_sim_new=BroadSpec(f_sim,ysim,f_exp,yexp,mode,lw_min,alpha_min);
 end
 
 function ynew=BroadSpec(f_sim,ysim,f_exp,yexp,mode,lw,alpha)
 
-alpha=1/2*sin(alpha)+1/2;
+alpha=1/2*sin(alpha)+1/2; % alpha can only be between 0 and 1
 df=f_sim(2)-f_sim(1);
 
 ysim(isnan(ysim))=0;
@@ -38,7 +40,7 @@ ynew=convspec(ysim,df,lw,0,alpha);
 
 ynew=interp1(f_sim,ynew,f_exp);
 ynew(isnan(ynew))=0;
-ynew=ynew.*logical(yexp)';
+ynew=ynew.*logical(yexp)'; % data that is exactly zero is also zeroed in the fitted spec
 ynew=rescale(ynew,yexp,mode);
 
 end
